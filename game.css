@@ -1,0 +1,200 @@
+#Header {
+	overflow: show;
+	background-color: black;
+	position: fixed;
+	vertical-align: middle;
+	color: white;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 4%;
+	display: flex;
+}
+
+#map,#x_map {
+	height: 96%;
+	width: 100%;
+	top: 4%;
+	left: 0;
+	position: fixed;
+	background-color: black;
+	color: white;
+	font-family: "Lucida Console",monospace;
+	line-height: 0.65em;
+	overflow-x: hidden;
+	white-space: nowrap
+}
+
+#MapTile {
+	display: inline-block;
+	cursor: default;
+	background-color: black;
+	/*border-color: white;
+	border: solid;
+	border-width: 1px;
+	/*transform: scale(1, 0.65);*/
+}
+
+#MapTile.expandable:hover {
+	cursor: pointer;
+	-webkit-filter: invert(100%);
+}
+
+#subMapBox {
+	display: none;
+	position: absolute;
+	left: 25%;
+	border-color: white;
+	border: solid;
+	border-width: 2px;
+	padding: 5px;
+}
+
+#subMapSector{
+	display: inline-block;
+}
+
+#lakewater {
+	color: Aquamarine;
+}
+
+#seawater {
+	color: blue;
+}
+
+#coastland {
+	color: white;
+}
+
+#inland {
+	color: black;
+}
+
+#beachS {
+	color: f4eaa6;
+}
+
+#plains {
+	color: 8faf72;
+}
+
+#city {
+	color: cbff54;
+	/*background-color: 606060;*/
+}
+#suburb {
+	color: 95c91a;
+}
+#noCity {
+	color: 969696;
+}
+
+#dev0 {/*development map*/
+	color: 160000;
+}
+#dev1 {
+	color: 380000;
+}
+#dev2 {
+	color: 540f00;
+}
+#dev3 {
+	color: 752300;
+}
+#dev4 {
+	color: 933d00;
+}
+#dev5 {
+	color: aa5b00;
+}
+#dev6 {
+	color: ba7200;
+}
+#dev7 {
+	color: c18700;
+}
+#dev8 {
+	color: d8a600;
+}
+#dev9 {
+	color: e0c600;
+}
+#dev10 {
+	color: fff600;
+}
+
+img {
+	width: 100%;
+	height: 100%;
+}
+
+.USA {
+	color: 6ab0d1;
+}
+
+.China {
+	color: e52481;
+}
+
+.Canada {
+	color: 7ea55e;
+}
+
+.Mexico {
+	color: edd06a;
+}
+
+.Greenland {
+	color: ffd6d6;
+}
+
+.Russia {
+	color: ffaa00;
+}
+
+.Norway {
+	color: a50000;
+}
+
+.name {
+	color: ffffff;
+}
+
+.control{
+	float: left;
+	display: block;
+	color: white;
+	background-color: black;
+	border-width: 3px;
+	border-style: solid;
+	padding: 5px;
+	vertical-align: middle;
+	text-align: center;
+	cursor: pointer;
+	width: 1.5%;
+}
+
+.display {
+	position: relative;
+	float: left;
+	display: block;
+	color: white;
+	background-color: black;
+	border-width: 3px;
+	padding: 5px;
+	border-style: solid;
+	vertical-align: middle;
+	cursor: pointer;
+}
+
+.control:hover, .display:hover {
+	color: yellow;
+}
+
+.active, .nofunction {
+	color: gray;
+}
+
+.troops {
+	color: red;
+}

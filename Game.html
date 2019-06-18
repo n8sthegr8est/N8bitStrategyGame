@@ -1,0 +1,32 @@
+<html>
+	<head>
+		<title>
+			N8bit's Strategy Game
+		</title>
+		<link rel="stylesheet" type="text/css" href="game.css">
+		<script src="map2.js"></script>
+	</head>
+	<body>
+		<div id="Header">
+			<div class="control" id="zoomOut" onclick="zoomOut()">-</div>
+			<div class="control" id="zoomIn" onclick="zoomIn()">+</div>
+			<div class="display" id="political" onclick="showPolitical()">Political</div>
+			<div class="display" id="blank" onclick="showBlank()">Blank</div>
+			<div class="display" id="physical" onclick="showPhysical()">Physical</div>
+			<div class="display" id="cities" onclick="showCities()">City</div>
+			<div class="display" id="development" onclick="showDevelopment()">Development</div>
+			<input type="checkbox" id="showPic" onclick="showMap()">show map
+			<div class="display" id="physical" onclick="curMap.scrollAround('left')">L</div>
+			<div class="display" id="physical" onclick="curMap.scrollAround('right')">R</div>
+			<div class="control" id="closeSubmap" onclick="closeSubmap()">X</div>
+		</div>
+		<div id="map">
+			...Loading Map...
+			<div id="subMapBox">
+			</div>
+		</div>
+		<!--div id="x_map">
+			<img src="https://www.mapsofworld.com/images-mow/world-map.jpg"></img>
+		</div-->
+	</body>
+</html>
