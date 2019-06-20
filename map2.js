@@ -17,10 +17,58 @@ var terrains = function(){
 var cityArr = []
 
 var city = function(name,loc,largeLoc,owner){
+	
+	/*
+	this.isInTopRow = (loc) => {
+		return loc[0] < 9 ? true : false;
+	}
+	
+	this.isInMiddleRow = (loc) => {
+		return loc[0] < 18 ? true : false;
+	}
+	
+	this.assignTopRowSect = (loc) => {
+		if(loc[1]<9){
+			return 0;
+		}
+		else if(loc[1]<18){
+			return 2;
+		}
+		else{
+			return 3;
+		}
+	}
+	
+	this.assignMiddleRowSect = (loc) => {
+		if(loc[1]<9){
+			return 3;
+		}
+		else if(loc[1]<18){
+			return 4;
+		}
+		else{
+			return 5;
+		}
+	}
+	
+	this.assignBottomRowSect = (loc) => {
+		if(loc[1]<9){
+			return 6;
+		}
+		else if(loc[1]<18){
+			return 7;
+		}
+		else{
+			return 8;
+		}
+	}
+	*/
+	
 	this.name = name;
 	this.loc = loc;
 	this.largeLoc = largeLoc;
 	this.owner = owner;
+	//this.ownedLand = [];
 	var sect = 0;
 	if(loc[0]<9){
 		if(loc[1]<9){
@@ -57,6 +105,7 @@ var city = function(name,loc,largeLoc,owner){
 	}
 	this.sect = sect;
 	this.trueCoords = [loc[0]%9,loc[1]%9];
+	//this.ownedLand.push([largeLoc[0],largeLoc[1],loc[1],loc[0]]);
 	largeMap.getTileOfID(largeLoc).subMap.sectors[sect].getTile(loc[1]%9,loc[0]%9).setCity(this);
 	this.growOwnership = () => {
 		
@@ -130,8 +179,9 @@ var subMapTile = function(parts){
 		return a;
 	}
 	
-	this.setTroops = (troopArr) => {
+	this.setTroops = (troopArr,tile) => {//tile is an array with the tile's location
 		this.troops = troopArr;
+		redrawTile(tile);
 	}
 	
 	this.setCity = (city) => {
@@ -165,19 +215,23 @@ var subMapTile = function(parts){
 			if(affectUpOffSubMap){
 				if(largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]-1])!=undefined){
 					largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]-1]).subMap.sectors[8].getTile(8,8).setSuburb(city);
+					//city.ownedLand.push([city.largeLoc[0]-1,city.largeLoc[1]-1,8,8]);
 				}
 			}
 			else if(affectDownOffSubMap){
 				if(largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]-1])!=undefined){
 					largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]-1]).subMap.sectors[2].getTile(8,0).setSuburb(city);
+					//city.ownedLand.push([city.largeLoc[0]+1,city.largeLoc[1]-1,8,0]);
 				}
 			}
 			if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]-1])!=undefined){
 				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]-1]).subMap.sectors[city.sect+2].getTile((city.loc[1]%9)-1,8)!=undefined){
 					largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]-1]).subMap.sectors[city.sect+2].getTile((city.loc[1]%9)-1,8).setSuburb(city);
+					//city.ownedLand.push([city.largeLoc[0],city.largeLoc[1]-1,(city.loc[1]%9)-1,8]);
 				}
 				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]-1]).subMap.sectors[city.sect+2].getTile((city.loc[1]%9),8)!=undefined){
 					largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]-1]).subMap.sectors[city.sect+2].getTile((city.loc[1]%9),8).setSuburb(city);
+					//city.ownedLand.push([city.largeLoc[0],city.largeLoc[1]-1,(city.loc[1]%9)-1,8]);
 				}
 				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]-1]).subMap.sectors[city.sect+2].getTile((city.loc[1]%9)+1,8)!=undefined){
 					largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]-1]).subMap.sectors[city.sect+2].getTile((city.loc[1]%9)+1,8).setSuburb(city);
@@ -521,25 +575,25 @@ function drawMap(){
 			}*/
 			for(let k = 0; k < rows[i].tiles[j].parts.length; k++){
 				if(rows[i].tiles[j].parts[k].type=="seawater"){
-					myHTML+="<span id=\"seawater\">.</span>";
+					myHTML+="<span id=\"seawater\">■</span>";
 				}
 				else if(rows[i].tiles[j].parts[k].type=="lakewater"){
-					myHTML+="<span id=\"lakewater\">.</span>";
+					myHTML+="<span id=\"lakewater\">■</span>";
 				}
 				else{
 					if(curView=="CITIES"){
 						if(rows[i].tiles[j].parts[k].sector.hasCity){
-							myHTML+="<span id=\"city\">.</span>"
+							myHTML+="<span id=\"city\">■</span>"
 						}
 						else{
-							myHTML+="<span id=\"noCity\">.</span>"
+							myHTML+="<span id=\"noCity\">■</span>"
 						}
 					}
 					else if(curView=="POLITICAL"){
-						myHTML+="<span class=\"" + rows[i].tiles[j].parts[k].overAllOwner() + "\">.</span>"
+						myHTML+="<span class=\"" + rows[i].tiles[j].parts[k].overAllOwner() + "\">■</span>"
 					}
 					else if(curView=="PHYSICAL"){
-						myHTML+="<span id=\"" + rows[i].tiles[j].parts[k].type + "\">.</span>"
+						myHTML+="<span id=\"" + rows[i].tiles[j].parts[k].type + "\">■</span>"
 					}
 					else{
 						if(rows[i].tiles[j].parts[k-3]!=undefined && rows[i].tiles[j].parts[k-3].type=="seawater" ||
@@ -550,13 +604,13 @@ function drawMap(){
 						   (k%3==2 && rows[i].tiles[j+1]!=undefined && rows[i].tiles[j+1].parts[k-2]!=undefined && rows[i].tiles[j+1].parts[k-2].type=="seawater") ||
 						   (k<3 && rows[i-1]!=undefined && rows[i-1].tiles[j]!=undefined && rows[i-1].tiles[j].parts[k+6]!=undefined && rows[i-1].tiles[j].parts[k+6].type=="seawater") ||
 						   (k>5 && rows[i+1]!=undefined && rows[i+1].tiles[j]!=undefined && rows[i+1].tiles[j].parts[k-6]!=undefined && rows[i+1].tiles[j].parts[k-6].type=="seawater")){
-							   myHTML+="<span id=\"coastland\">.</span>";
+							   myHTML+="<span id=\"coastland\">■</span>";
 						}
 						/*else if(i==0 && k<3){
 							myHTML+="<span id=\"coastland\">.</span>";
 						}*/
 						else{
-							myHTML+="<span id=\"inland\">.</span>";
+							myHTML+="<span id=\"inland\">■</span>";
 						}
 					}
 				}
@@ -575,7 +629,160 @@ function drawMap(){
 	}
 }
 
-function openSubMap(id){
+function openSubMap(id){//view is centered on id
+	var myHTML = "";
+	//var myFullMap = "";// = "<div id=\"subMapDisplay\">";
+	for(let h = 0; h < largeMap.rows.length; h++){
+		var mySubMapRows = "<div id=\"subMapRow\">";
+	for(let i = 0; i < largeMap.rows[h].tiles.length; i++){
+		var mySubMaps = "<div id=\"subMapDisplay\">";
+	for(let j = 0; j < 9; j++){
+		var myBigRow = "";
+		for(let k = 0; k < 9; k++){
+			var myRow = "";
+			for(let l = 0; l < 9; l++){//class=tile*largeMapRow**largeMapCol**subMapSector**sectorRow**sectorCol* 
+				var myTile = "<div id=\"MapTile\" class=\"tile" + h + "" + i + "" + j + "" + k + "" + l + "\">";
+				for(let m = 0; m < 9; m++){
+					if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).troops[m]!=undefined){
+						myTile += "<span class=\"troops\">" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).troops[m].getIcon() + "</span>";
+					}
+					else if(curView=="DEVELOPMENT"){
+						if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="seawater" || largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="lakewater"){
+							myTile += "<span id=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\">■</span>"
+						}
+						else{
+							myTile += "<span id=\"dev" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].development + "\">■</span>"
+						}
+					}
+					else if(curView=="CITIES"){
+						if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="seawater" || largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="lakewater"){
+							myTile += "<span id=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\">■</span>"
+						}
+						else if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).isCity){
+							myTile += "<span id=\"city\">■</span>";
+						}
+						else if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).isSuburb){
+							myTile += "<span id=\"suburb\">■</span>";
+						}
+						else{
+							myTile += "<span id=\"noCity\">■</span>";
+						}
+					}
+					else if(curView=="PHYSICAL"){
+						myTile += "<span id=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\">■</span>"
+					}
+					else if(curView=="POLITICAL"){
+						if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="seawater" || largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="lakewater"){
+							myTile += "<span id=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\">■</span>"
+						}
+						else{
+							myTile += "<span class=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].owner + "\">■</span>"
+						}
+					}
+					else{
+						if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="seawater" || largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="lakewater"){
+							myTile += "<span id=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\">■</span>"
+						}
+						else{
+							myTile+="<span id=\"inland\">■</span>";
+						}
+					}
+					if(m+1 < 9 && (m+1)%3==0){
+						myTile += "<br>";
+					}
+				}
+				myRow += myTile + "</div>";
+				myTile = "<div id=\"MapTile\">";
+			}
+			myBigRow += myRow + "<br>";
+			myRow = "";
+		}
+		mySubMaps += "<div id=\"subMapSector\">" + myBigRow + "</div>";
+		if(j+1 < 9 && (j+1)%3==0){
+			mySubMaps += "<br>";
+		}
+		myBigRow = "";
+	}
+	//myHTML = myFullMap
+	mySubMapRows += mySubMaps + "</div>"
+	mySubMaps = "<div id=\"subMapDisplay\">";
+	}
+	myHTML += mySubMapRows + "<br>";
+	mySubMapRows = "<div id=\"subMapRow\">";
+	}
+	document.getElementById("map").innerHTML = myHTML;
+	subMapOpen = true;
+}
+
+function redrawTile(coords){//[largeMapRow,largeMapCol,subMapSector,sectorRow,sectorCol]
+	if(!subMapOpen){
+		return;
+	}
+	var h = coords[0];
+	var i = coords[1];
+	var j = coords[2];
+	var k = coords[3];
+	var l = coords[4];
+	var tileNeeded = "tile" + h;
+	tileNeeded += "" + i;
+	tileNeeded += "" + j;
+	tileNeeded += "" + k;
+	tileNeeded += "" + l;
+	var x = document.getElementsByClassName(tileNeeded)[0];
+	var myTile = "";
+	for(let m = 0; m < 9; m++){
+		if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).troops[m]!=undefined){
+			myTile += "<span class=\"troops\">" + largeMap.getTileOfID([coords[0],coords[1]]).subMap.sectors[coords[2]].getTile(coords[3],coords[4]).troops[m].getIcon() + "</span>";
+		}
+		else if(curView=="DEVELOPMENT"){
+			if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="seawater" || largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="lakewater"){
+				myTile += "<span id=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\">■</span>"
+			}
+			else{
+				myTile += "<span id=\"dev" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].development + "\">■</span>"
+			}
+		}
+		else if(curView=="CITIES"){
+			if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="seawater" || largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="lakewater"){
+				myTile += "<span id=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\">■</span>"
+			}
+			else if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).isCity){
+				myTile += "<span id=\"city\">■</span>";
+			}
+			else if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).isSuburb){
+				myTile += "<span id=\"suburb\">■</span>";
+			}
+			else{
+				myTile += "<span id=\"noCity\">■</span>";
+			}
+		}
+		else if(curView=="PHYSICAL"){
+			myTile += "<span id=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\">■</span>"
+		}
+		else if(curView=="POLITICAL"){
+			if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="seawater" || largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="lakewater"){
+				myTile += "<span id=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\">■</span>"
+			}
+			else{
+				myTile += "<span class=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].owner + "\">■</span>"
+			}
+		}
+		else{
+			if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="seawater" || largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="lakewater"){
+				myTile += "<span id=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\">■</span>"
+			}
+			else{
+				myTile+="<span id=\"inland\">■</span>";
+			}
+		}
+		if(m+1 < 9 && (m+1)%3==0){
+			myTile += "<br>";
+		}
+	}
+	x.innerHTML = myTile;
+}
+
+/*function openSubMap(id){
 	document.getElementById("subMapBox").style.display = "block";
 	curSubMap = id;
 	var myHtml = "";
@@ -606,14 +813,7 @@ function openSubMap(id){
 							else if(largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).isCity){
 								myTile += "<span id=\"city\">.</span>";
 							}
-							else if(largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).isSuburb){/*(largeMap.getTileOfID(id).subMap.sectors[j].getTile(k+1,l+1)!=undefined && largeMap.getTileOfID(id).subMap.sectors[j].getTile(k+1,l+1).isCity) ||
-									(largeMap.getTileOfID(id).subMap.sectors[j].getTile(k+1,l)!=undefined && largeMap.getTileOfID(id).subMap.sectors[j].getTile(k+1,l).isCity) ||
-									(largeMap.getTileOfID(id).subMap.sectors[j].getTile(k+1,l-1)!=undefined && largeMap.getTileOfID(id).subMap.sectors[j].getTile(k+1,l-1).isCity) ||
-									(largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l+1)!=undefined && largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l+1).isCity) ||
-									(largeMap.getTileOfID(id).subMap.sectors[j].getTile(k-1,l+1)!=undefined && largeMap.getTileOfID(id).subMap.sectors[j].getTile(k-1,l+1).isCity) ||
-									(largeMap.getTileOfID(id).subMap.sectors[j].getTile(k-1,l)!=undefined && largeMap.getTileOfID(id).subMap.sectors[j].getTile(k-1,l).isCity) ||
-									(largeMap.getTileOfID(id).subMap.sectors[j].getTile(k-1,l-1)!=undefined && largeMap.getTileOfID(id).subMap.sectors[j].getTile(k-1,l-1).isCity) ||
-									(largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l-1)!=undefined && largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l-1).isCity)){*/
+							else if(largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).isSuburb){
 								myTile += "<span id=\"suburb\">.</span>";
 							}
 							else{
@@ -660,11 +860,12 @@ function openSubMap(id){
 	//}
 	document.getElementById("subMapBox").innerHTML = myHtml;
 	subMapOpen = true;
-}
+}*/
 
 function closeSubmap(){
-	document.getElementById("subMapBox").style.display = "none";
+	//document.getElementById("subMapBox").style.display = "none";
 	subMapOpen = false;
+	drawMap();
 }
 
 var subMapOpen = false;
@@ -693,6 +894,25 @@ function showCities() {
 function showDevelopment() {
 	curView = "DEVELOPMENT";
 	drawMap();
+}
+//Tests
+function TestShowingTroops() {//just tests to ensure troops visible
+	var t = new division(500,"infantry");
+	var u = new division(500,"cavalry");
+	var v = new division(500,"artillery");
+	largeMap.getTileOfID([0,0]).subMap.sectors[2].getTile(3,3).setTroops([t,undefined,u,undefined,v,undefined,t,undefined,u],[0,0,2,3,3])
+	drawMap();
+}
+
+function TestShowingTroops2() {//tests deploying troops
+	var t = new division(500,"infantry");
+	t.deploy(cityArr[3]);
+}
+
+function TestMarchNY2PHIL() {//tests troops marching
+	var t = new division(500,"infantry");
+	t.deploy(cityArr[1]);
+	t.setMarchToCity(cityArr[0]);
 }
 
 window.onload = function(){

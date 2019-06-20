@@ -5,6 +5,8 @@
 		</title>
 		<link rel="stylesheet" type="text/css" href="game.css">
 		<script src="map2.js"></script>
+		<script src="military.js"></script>
+		<meta charset="UTF-8">
 	</head>
 	<body>
 		<div id="Header">
@@ -19,10 +21,14 @@
 			<div class="display" id="physical" onclick="curMap.scrollAround('left')">L</div>
 			<div class="display" id="physical" onclick="curMap.scrollAround('right')">R</div>
 			<div class="control" id="closeSubmap" onclick="closeSubmap()">X</div>
+			Troop Tests:
+			<div class="display" id="physical" onclick="TestShowingTroops()">deploy1</div>
+			<div class="display" id="physical" onclick="TestShowingTroops2()">deploy2</div>
+			<div class="display" id="physical" onclick="TestMarchNY2PHIL()">March1</div>
 		</div>
 		<div id="map">
 			...Loading Map...
-			<div id="subMapBox">
+			<!--div id="subMapBox"-->
 			</div>
 		</div>
 		<!--div id="x_map">

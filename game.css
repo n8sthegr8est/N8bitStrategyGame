@@ -50,6 +50,15 @@
 	padding: 5px;
 }
 
+#subMapRow {
+	display: inline-block;
+	white-space: nowrap;
+}
+
+#subMapDisplay {
+	display: inline-block;
+}
+
 #subMapSector{
 	display: inline-block;
 }
