@@ -450,7 +450,7 @@ function getCoordLeft(unitLoc){
 function getCoordRight(unitLoc){
 	var bigRow,bigCol,sect,subRow,subCol,part;
 	if(isInRightSectorColumn(unitLoc[5])){//is in right column of parts
-		if(unitLoc[4]==0){//is in right column of current sector
+		if(unitLoc[4]==8){//is in right column of current sector
 			if(isInRightSectorColumn(unitLoc[2])){//is in right column of subMap sectors
 				//shouldn't need to ever check if at right of map, since area is impossible to reach, and will be seen as undefined long before this is ever called.
 				bigRow = unitLoc[0];//in the same subMap row
@@ -666,7 +666,8 @@ function isInRightSectorColumn(sect){
 
 function assessTerainFavor(tile){
 	//add later. It depends on development and terrain.
-	if(tile.terrainType==terrains.sea||tile.terrainType==terrains.lake){
+	var x = largeMap.getTileOfID([tile[0],tile[1]]).subMap.sectors[tile[2]].getTile(tile[3],tile[4]).parts[tile[5]].terrainType;
+	if(x=="seawater"||x=="lakewater"){
 		return 0;
 	}
 	else{

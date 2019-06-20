@@ -915,6 +915,12 @@ function TestMarchNY2PHIL() {//tests troops marching
 	t.setMarchToCity(cityArr[0]);
 }
 
+function TestMarchNY2MOS() {//tests troops marching around water
+	var t = new division(500,"artillery");
+	t.deploy(cityArr[1]);
+	t.setMarchToCity(cityArr[4]);
+}
+
 window.onload = function(){
 	var x = new smallestPart("seawater");
 	var x2 = new smallestPart("beachS");
@@ -965,7 +971,7 @@ window.onload = function(){
 	//var z = new subMapSector([y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y,y]);
 	//var z2 = new subMapSector([y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2]);
 	var v = new subMap([z.copy(),z3.copy(),z4.copy(),z2.copy(),z.copy(),z3.copy(),z2.copy(),z2.copy(),z.copy()]);
-	var q = new subMap([z3.copy(),z3.copy(),z3.copy(),z3.copy(),z3.copy(),z3.copy(),z3.copy(),z3.copy(),z3.copy()]);
+	var q = new subMap([z3.copy(),z3.copy(),z3.copy(),z3.copy(),z2.copy(),z3.copy(),z3.copy(),z2.copy(),z3.copy()]);
 	var a = new tile(v);
 	var e = new tile(q);
 	var b = new row([a,e]);
@@ -974,6 +980,7 @@ window.onload = function(){
 	var d = new city("New York",[0,20],[0,1],"USA");
 	var f = new city("Chicago",[26,5],[0,0],"USA");
 	var g = new city("Ontario",[18,8],[0,0],"Canada");
+	var h = new city("Moscow",[26,0],[0,1],"Russia");
 	//var d = new city("testia2",[9,7],[0,0]);
 	//var e = new city("testia3",[2,0],[0,0]);
 	drawMap();
