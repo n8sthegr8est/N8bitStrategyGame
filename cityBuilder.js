@@ -7,6 +7,9 @@ var prevSelected = [];
 var timeOutHold;
 
 function OpenCityBuilder(){
+	if(curView == "CITY_BUILDER"){
+		return;
+	}
 	var x = document.getElementById("cityCreateBox");
 	x.style.display = "block";
 	prevMapMode = curView;

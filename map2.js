@@ -1651,6 +1651,9 @@ function showDevelopment() {
 }
 
 function showCityBuildMode() {
+	if(curView == "CITY_BUILDER"){
+		return;
+	}
 	curView = "CITY_BUILDER"
 	drawMap();
 }
