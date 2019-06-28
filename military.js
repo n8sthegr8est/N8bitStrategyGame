@@ -98,6 +98,12 @@ var division = function(manpower,unitType){
 		}
 	}
 	
+	this.board = (ship) => {
+		if(ship.hasCapacity()){
+			ship.letAboard(this);
+		}
+	}
+	
 	if(typeof manpower != "number"/* || manpower.isNaN()*/){
 		throw "Error! Manpower must be a valid number."
 	}
@@ -667,8 +673,9 @@ function isInRightSectorColumn(sect){
 function assessTerainFavor(tile){
 	//add later. It depends on development and terrain.
 	var x = largeMap.getTileOfID([tile[0],tile[1]]).subMap.sectors[tile[2]].getTile(tile[3],tile[4]).parts[tile[5]].terrainType;
-	if(x=="seawater"||x=="lakewater"){
-		return 0;
+	if((x=="seawater" && !largeMap.getTileOfID([tile[0],tile[1]]).subMap.sectors[tile[2]].getTile(tile[3],tile[4]).hasCity)||x=="lakewater"){
+		//if it's a city, it is considered to have a bridge over its harbor inlet.
+		return 0;//0 is considered impassable.
 	}
 	else{
 		return 1;//1 is best favorability, 0 is worst.

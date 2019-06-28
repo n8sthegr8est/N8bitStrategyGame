@@ -14,7 +14,28 @@ var terrains = function(){
 	this.beachS = "sandy beach";//a beach made from sand
 }
 
-var cityArr = []
+var cityArr = [];
+
+function createNewCity(name,owner,coords){//currently, this simply makes a city being given the default coordinate scheme.
+	var thisLargeLoc = [coords[0],coords[1]];//plan to remove once city code rewritten to use that instead.
+	var thisSector = coords[2];
+	var thisLocX = coords[4];
+	var thisLocY = coords[3];
+	if(isInMiddleSectorColumn(thisSector)){
+		thisLocX+=9;
+	}
+	if(isInRightSectorColumn(thisSector)){
+		thisLocX+=18;
+	}
+	if(isInMiddleSectorRow(thisSector)){
+		thisLocY+=9;
+	}
+	if(isInBottomSectorRow(thisSector)){
+		thisLocY+=18;
+	}
+	var thisLoc = [thisLocX,thisLocY];
+	var z = new city(name,thisLoc,thisLargeLoc,owner);
+}
 
 var city = function(name,loc,largeLoc,owner){
 	
@@ -67,8 +88,16 @@ var city = function(name,loc,largeLoc,owner){
 	this.name = name;
 	this.loc = loc;
 	this.largeLoc = largeLoc;
-	this.owner = owner;
-	//this.ownedLand = [];
+	var x = findCountryByName(owner);
+	if(x==undefined){
+		this.owner = registerCountry(owner);
+	}
+	else{
+		this.owner = x;
+	}
+	//this.owner = owner;
+	this.hasHarbor = false;
+	this.ownedLand = [];
 	var sect = 0;
 	if(loc[0]<9){
 		if(loc[1]<9){
@@ -105,11 +134,215 @@ var city = function(name,loc,largeLoc,owner){
 	}
 	this.sect = sect;
 	this.trueCoords = [loc[0]%9,loc[1]%9];
-	//this.ownedLand.push([largeLoc[0],largeLoc[1],loc[1],loc[0]]);
+	//this.tiles = [[largeLoc[0],largeLoc[1],sect,loc[1]%9,loc[0]%9]]
+	this.ownedLand.push([largeLoc[0],largeLoc[1],sect,loc[1]%9,loc[0]%9]);
 	largeMap.getTileOfID(largeLoc).subMap.sectors[sect].getTile(loc[1]%9,loc[0]%9).setCity(this);
 	this.growOwnership = () => {
-		
+		let availableTiles = [];
+		for(let i = 0; i < this.ownedLand.length; i++){
+			let x = this.getValidGrowthTiles(this.ownedLand[i]);
+			if(x!=undefined && x.length!=0){
+				for(let j = 0; j < x.length; j++){
+					availableTiles.push(x[j].slice());
+				}
+			}
+		}
+		if(availableTiles.length > 0){
+			var rando = Math.floor(Math.random()*availableTiles.length);
+			var growTo = availableTiles[rando].slice();
+			this.ownedLand.push(growTo.slice());
+			largeMap.getTileOfID([growTo[0],growTo[1]]).subMap.sectors[growTo[2]].getTile(growTo[3],growTo[4]).setOwner(this.owner);
+			//var growableBorders = this.findBorders();
+		}
 	}
+	
+	this.getValidGrowthTiles = (tileCoords) => {
+		var coordUp,coordDown,coordLeft,coordRight;
+		var hold;
+		if(tileCoords[3]==0){//tile is at top of sector
+			if(isInTopSectorRow(tileCoords[2])){//sector is at top of subMap
+				if(tileCoords[0]!=0){//subMap is not at top of map
+					if(largeMap.getTileOfID([tileCoords[0]-1,tileCoords[1]]).subMap.sectors[tileCoords[2]+6].getTile(8,tileCoords[4]).owner==undefined &&
+					   largeMap.getTileOfID([tileCoords[0]-1,tileCoords[1]]).subMap.sectors[tileCoords[2]+6].getTile(8,tileCoords[4]).hasOwnableLand()){
+						//coordUp = largeMap.getTileOfID([tileCoords[0]-1,tileCoords[1]]).subMap.sectors[tileCoords[2]+6].getTile(8,tileCoords[4]);
+						coordUp = [tileCoords[0]-1,tileCoords[1],tileCoords[2]+6,8,tileCoords[4]];
+					}
+					else{
+						coordUp = undefined;//it already was, but being explicit for clarity
+					}	
+				}
+				else{
+					coordUp = undefined;//it already was, but being explicit for clarity
+				}
+			}
+			else{
+				if(largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]-3].getTile(8,tileCoords[4]).owner==undefined &&
+				   largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]-3].getTile(8,tileCoords[4]).hasOwnableLand()){
+					//coordUp = largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]-3].getTile(8,tileCoords[4]);
+					coordUp = [tileCoords[0],tileCoords[1],tileCoords[2]-3,8,tileCoords[4]];
+				}
+				else{
+					coordUp = undefined;//it already was, but being explicit for clarity
+				}
+			}
+		}
+		else{
+			if(largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]].getTile(tileCoords[3]-1,tileCoords[4]).owner==undefined &&
+			   largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]].getTile(tileCoords[3]-1,tileCoords[4]).hasOwnableLand()){
+				//coordUp = largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]].getTile(tileCoords[3]-1,tileCoords[4]);
+				coordUp = [tileCoords[0],tileCoords[1],tileCoords[2],tileCoords[3]-1,tileCoords[4]];
+			}
+			else{
+				coordUp = undefined;//it already was, but being explicit for clarity
+			}
+		}
+		
+		if(tileCoords[3]==8){//tile is at bottom of sector
+			if(isInBottomSectorRow(tileCoords[2])){//sector is at bottom of subMap
+				if(tileCoords[0]+1<largeMap.rows.length){//subMap is not at bottom of map
+					if(largeMap.getTileOfID([tileCoords[0]+1,tileCoords[1]]).subMap.sectors[tileCoords[2]-6].getTile(0,tileCoords[4]).owner==undefined &&
+					   largeMap.getTileOfID([tileCoords[0]+1,tileCoords[1]]).subMap.sectors[tileCoords[2]-6].getTile(0,tileCoords[4]).hasOwnableLand()){
+						//coordUp = largeMap.getTileOfID([tileCoords[0]-1,tileCoords[1]]).subMap.sectors[tileCoords[2]+6].getTile(8,tileCoords[4]);
+						coordDown = [tileCoords[0]+1,tileCoords[1],tileCoords[2]-6,0,tileCoords[4]];
+					}
+					else{
+						coordDown = undefined;//it already was, but being explicit for clarity
+					}	
+				}
+				else{
+					coordDown = undefined;//it already was, but being explicit for clarity
+				}
+			}
+			else{
+				if(largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]+3].getTile(0,tileCoords[4]).owner==undefined &&
+				   largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]+3].getTile(0,tileCoords[4]).hasOwnableLand()){
+					//coordUp = largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]-3].getTile(8,tileCoords[4]);
+					coordDown = [tileCoords[0],tileCoords[1],tileCoords[2]+3,0,tileCoords[4]];
+				}
+				else{
+					coordDown = undefined;//it already was, but being explicit for clarity
+				}
+			}
+		}
+		else{
+			if(largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]].getTile(tileCoords[3]+1,tileCoords[4]).owner==undefined &&
+			   largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]].getTile(tileCoords[3]+1,tileCoords[4]).hasOwnableLand()){
+				//coordUp = largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]].getTile(tileCoords[3]-1,tileCoords[4]);
+				coordDown = [tileCoords[0],tileCoords[1],tileCoords[2],tileCoords[3]+1,tileCoords[4]];
+			}
+			else{
+				coordDown = undefined;//it already was, but being explicit for clarity
+			}
+		}
+		
+		if(tileCoords[4]==0){//tile is at left of sector
+			if(isInLeftSectorColumn(tileCoords[2])){//sector is at left of subMap
+				if(tileCoords[1]!=0){//subMap is not at left of map
+					if(largeMap.getTileOfID([tileCoords[0],tileCoords[1]-1]).subMap.sectors[tileCoords[2]+2].getTile(tileCoords[3],8).owner==undefined &&
+					   largeMap.getTileOfID([tileCoords[0],tileCoords[1]-1]).subMap.sectors[tileCoords[2]+2].getTile(tileCoords[3],8).hasOwnableLand()){
+						//coordUp = largeMap.getTileOfID([tileCoords[0]-1,tileCoords[1]]).subMap.sectors[tileCoords[2]+6].getTile(8,tileCoords[4]);
+						coordLeft = [tileCoords[0],tileCoords[1]-1,tileCoords[2]+2,tileCoords[3],8];
+					}
+					else{
+						coordLeft = undefined;//it already was, but being explicit for clarity
+					}	
+				}
+				else{
+					coordLeft = undefined;//it already was, but being explicit for clarity
+				}
+			}
+			else{
+				if(largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]-1].getTile(tileCoords[3],8).owner==undefined &&
+				   largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]-1].getTile(tileCoords[3],8).hasOwnableLand()){
+					//coordUp = largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]-3].getTile(8,tileCoords[4]);
+					coordLeft = [tileCoords[0],tileCoords[1],tileCoords[2]-1,tileCoords[3],8];
+				}
+				else{
+					coordLeft = undefined;//it already was, but being explicit for clarity
+				}
+			}
+		}
+		else{
+			if(largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]].getTile(tileCoords[3],tileCoords[4]-1).owner==undefined &&
+			   largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]].getTile(tileCoords[3],tileCoords[4]-1).hasOwnableLand()){
+				//coordUp = largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]].getTile(tileCoords[3]-1,tileCoords[4]);
+				coordLeft = [tileCoords[0],tileCoords[1],tileCoords[2],tileCoords[3],tileCoords[4]-1];
+			}
+			else{
+				coordLeft = undefined;//it already was, but being explicit for clarity
+			}
+		}
+		
+		if(tileCoords[4]==8){//tile is at right of sector
+			if(isInRightSectorColumn(tileCoords[2])){//sector is at right of subMap
+				if(tileCoords[1]+1<largeMap.rows[0].tiles.length){//subMap is not at right of map
+					if(largeMap.getTileOfID([tileCoords[0],tileCoords[1]+1]).subMap.sectors[tileCoords[2]-2].getTile(tileCoords[3],0).owner==undefined &&
+					   largeMap.getTileOfID([tileCoords[0],tileCoords[1]+1]).subMap.sectors[tileCoords[2]-2].getTile(tileCoords[3],0).hasOwnableLand()){
+						//coordUp = largeMap.getTileOfID([tileCoords[0]-1,tileCoords[1]]).subMap.sectors[tileCoords[2]+6].getTile(8,tileCoords[4]);
+						coordRight = [tileCoords[0],tileCoords[1]+1,tileCoords[2]-2,tileCoords[3],0];
+					}
+					else{
+						coordRight = undefined;//it already was, but being explicit for clarity
+					}	
+				}
+				else{
+					coordRight = undefined;//it already was, but being explicit for clarity
+				}
+			}
+			else{
+				if(largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]+1].getTile(tileCoords[3],0).owner==undefined &&
+				   largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]+1].getTile(tileCoords[3],0).hasOwnableLand()){
+					//coordUp = largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]-3].getTile(8,tileCoords[4]);
+					coordRight = [tileCoords[0],tileCoords[1],tileCoords[2]+1,tileCoords[3],0];
+				}
+				else{
+					coordRight = undefined;//it already was, but being explicit for clarity
+				}
+			}
+		}
+		else{
+			if(largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]].getTile(tileCoords[3],tileCoords[4]+1).owner==undefined &&
+			   largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]].getTile(tileCoords[3],tileCoords[4]+1).hasOwnableLand()){
+				//coordUp = largeMap.getTileOfID([tileCoords[0],tileCoords[1]]).subMap.sectors[tileCoords[2]].getTile(tileCoords[3]-1,tileCoords[4]);
+				coordRight = [tileCoords[0],tileCoords[1],tileCoords[2],tileCoords[3],tileCoords[4]+1];
+			}
+			else{
+				coordRight = undefined;//it already was, but being explicit for clarity
+			}
+		}
+		
+		var allHold = [];
+		if(coordUp!=undefined){
+			allHold.push(coordUp.slice());
+		}
+		if(coordDown!=undefined){
+			allHold.push(coordDown.slice());
+		}
+		if(coordLeft!=undefined){
+			allHold.push(coordLeft.slice());
+		}
+		if(coordRight!=undefined){
+			allHold.push(coordRight.slice());
+		}
+		return allHold;
+	}
+	
+	this.owns = (tileCoords) => {
+		for(let i = 0; i < this.ownedLand.length; i++){
+			if(this.ownedLand[i][0]==tileCoords[0]&&this.ownedLand[i][1]==tileCoords[1]&&
+			   this.ownedLand[i][2]==tileCoords[2]&&this.ownedLand[i][3]==tileCoords[3]&&
+			   this.ownedLand[i][4]==tileCoords[4]){
+				return true;
+			   }
+		}
+		return false;
+	}
+	
+	/*this.findBorders = () => {
+		for(let x = 0; x < this.tiles.length; i++){
+			
+		}
+	}*/
 	/*largeMap.getTileOfID(largeLoc).subMap.sectors[sect].getTile((loc[0]%9)-1,(loc[1]%9)-1).setOwner(this.owner);
 	largeMap.getTileOfID(largeLoc).subMap.sectors[sect].getTile((loc[0]%9)-1,loc[1]%9).setOwner(this.owner);
 	largeMap.getTileOfID(largeLoc).subMap.sectors[sect].getTile((loc[0]%9)-1,(loc[1]%9)+1).setOwner(this.owner);
@@ -184,7 +417,66 @@ var subMapTile = function(parts){
 		redrawTile(tile);
 	}
 	
+	this.addHarbor = (dir) => {//dir = "UL/UC/UR/CL/CR/DL/DC/DR"
+		let z = this.parts[4].terrainType;
+		this.parts[4].terrainType = "seawater";
+		switch(dir){
+			case "UL":
+				this.parts[0].terrainType = "seawater";
+				return true;
+			case "UC":
+				this.parts[1].terrainType = "seawater";
+				return true;
+			case "UR":
+				this.parts[2].terrainType = "seawater";
+				return true;
+			case "CL":
+				this.parts[3].terrainType = "seawater";
+				return true;
+			case "DL":
+				this.parts[6].terrainType = "seawater";
+				return true;
+			case "DC":
+				this.parts[7].terrainType = "seawater";
+				return true;
+			case "DR":
+				this.parts[8].terrainType = "seawater";
+				return true;
+			case "CR":
+				this.parts[5].terrainType = "seawater";
+				return true;
+			default: //assume error
+				this.parts[4].terrainType = z;
+				return false;
+		}
+	}
+	
+	this.hasOwnableLand = () => {
+		for(let i = 0; i < 9; i++){
+			if(this.parts[i].terrainType!="seawater"){
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	this.isSettlableLand = () => {
+		let x = 0;
+		for(let i = 0; i < 9; i++){
+			if(this.parts[i].terrainType!="seawater"){
+				x++;
+			}
+		}
+		if(x > 4){
+			return true;
+		}
+		return false;
+	}
+	
 	this.setCity = (city) => {
+		if(!this.isSettlableLand){
+			throw "Error! A city must consist mostly of land!";
+		}
 		this.isCity = true;
 		//this.parts[4].isCapital = true;
 		this.parts[4].development = 5;
@@ -211,30 +503,64 @@ var subMapTile = function(parts){
 		if((city.sect==6 || city.sect==7 || city.sect==8) && city.loc[1]%9==8){
 			affectDownOffSubMap = true;
 		}
+		
+		//let curHarborDir = "XX";
+		
 		if(affectLeftOffSubMap){
 			if(affectUpOffSubMap){
 				if(largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]-1])!=undefined){
 					largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]-1]).subMap.sectors[8].getTile(8,8).setSuburb(city);
-					//city.ownedLand.push([city.largeLoc[0]-1,city.largeLoc[1]-1,8,8]);
+					/*if(largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]-1]).subMap.sectors[8].getTile(8,8).parts[8].terrainType=="seawater"){
+						city.hasHarbor=true;
+						curHarborDir = "UL";
+					}*/
+					//city.tiles.push([city.largeLoc[0]-1,city.largeLoc[1]-1,8,8,8]);
+					if(largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]-1]).subMap.sectors[8].getTile(8,8).hasOwnableLand()){
+						city.ownedLand.push([city.largeLoc[0]-1,city.largeLoc[1]-1,8,8,8]);
+					}
 				}
 			}
 			else if(affectDownOffSubMap){
 				if(largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]-1])!=undefined){
 					largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]-1]).subMap.sectors[2].getTile(8,0).setSuburb(city);
-					//city.ownedLand.push([city.largeLoc[0]+1,city.largeLoc[1]-1,8,0]);
+					/*if(largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]-1]).subMap.sectors[2].getTile(8,0).parts[2].terrainType=="seawater"){
+						city.hasHarbor=true;
+						curHarborDir = "DL"
+					}*/
+					//city.tiles.push([city.largeLoc[0]+1,city.largeLoc[1]-1,2,8,0]);
+					if(largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]-1]).subMap.sectors[2].getTile(8,0).hasOwnableLand()){
+						city.ownedLand.push([city.largeLoc[0]+1,city.largeLoc[1]-1,2,8,0]);
+					}
 				}
 			}
+			/*else if(affectUpOffSector){
+				largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]-1]).subMap.sectors[8].getTile(8,8).setSuburb(city);
+			}*/
 			if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]-1])!=undefined){
 				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]-1]).subMap.sectors[city.sect+2].getTile((city.loc[1]%9)-1,8)!=undefined){
 					largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]-1]).subMap.sectors[city.sect+2].getTile((city.loc[1]%9)-1,8).setSuburb(city);
-					//city.ownedLand.push([city.largeLoc[0],city.largeLoc[1]-1,(city.loc[1]%9)-1,8]);
+					/*if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]-1]).subMap.sectors[city.sect+2].getTile((city.loc[1]%9)-1,8).parts[8].terrainType=="seawater"){
+						city.hasHarbor=true;
+						curHarborDir = "UL"
+					}*/
+					//city.tiles.push([city.largeLoc[0],city.largeLoc[1]-1,city.sect+2,(city.loc[1]%9)-1,8]);
+					if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]-1]).subMap.sectors[city.sect+2].getTile((city.loc[1]%9)-1,8).hasOwnableLand()){
+						city.ownedLand.push([city.largeLoc[0],city.largeLoc[1]-1,city.sect+2,(city.loc[1]%9)-1,8]);
+					}
 				}
 				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]-1]).subMap.sectors[city.sect+2].getTile((city.loc[1]%9),8)!=undefined){
 					largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]-1]).subMap.sectors[city.sect+2].getTile((city.loc[1]%9),8).setSuburb(city);
 					//city.ownedLand.push([city.largeLoc[0],city.largeLoc[1]-1,(city.loc[1]%9)-1,8]);
+					if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]-1]).subMap.sectors[city.sect+2].getTile((city.loc[1]%9),8).hasOwnableLand()){
+						city.ownedLand.push([city.largeLoc[0],city.largeLoc[1]-1,city.sect+2,(city.loc[1]%9),8]);
+					}
 				}
 				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]-1]).subMap.sectors[city.sect+2].getTile((city.loc[1]%9)+1,8)!=undefined){
 					largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]-1]).subMap.sectors[city.sect+2].getTile((city.loc[1]%9)+1,8).setSuburb(city);
+					
+					if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]-1]).subMap.sectors[city.sect+2].getTile((city.loc[1]%9)+1,8).hasOwnableLand()){
+						city.ownedLand.push([city.largeLoc[0],city.largeLoc[1]-1,city.sect+2,(city.loc[1]%9)+1,8]);
+					}
 				}
 			}
 		}
@@ -242,48 +568,101 @@ var subMapTile = function(parts){
 			if(affectUpOffSubMap){
 				if(largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]+1])!=undefined){
 					largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]+1]).subMap.sectors[6].getTile(0,8).setSuburb(city);
+					
+					if(largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]+1]).subMap.sectors[6].getTile(0,8).hasOwnableLand()){
+						city.ownedLand.push([city.largeLoc[0]-1,city.largeLoc[1]+1,6,0,8]);
+					}
 				}
 			}
 			else if(affectDownOffSubMap){
 				if(largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]+1])!=undefined){
 					largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]+1]).subMap.sectors[0].getTile(0,0).setSuburb(city);
+					
+					if(largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]+1]).subMap.sectors[0].getTile(0,0).hasOwnableLand()){
+						city.ownedLand.push([city.largeLoc[0]+1,city.largeLoc[1]+1,0,0,0]);
+					}
 				}
 			}
+			/*else if(affectDownOffSector){
+				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]+1])!=undefined){
+					largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]+1]).subMap.sectors[city.sect+1].getTile(0,0).setSuburb(city);
+					
+					if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]+1]).subMap.sectors[city.sect+1].getTile(0,0).hasOwnableLand()){
+						city.ownedLand.push([city.largeLoc[0],city.largeLoc[1]+1,city.sect+1,0,0]);
+					}
+				}
+			}*/
 			if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]+1])!=undefined){
 				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]+1]).subMap.sectors[city.sect-2].getTile((city.loc[1]%9)-1,0)!=undefined){
 					largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]+1]).subMap.sectors[city.sect-2].getTile((city.loc[1]%9)-1,0).setSuburb(city);
+					
+					if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]+1]).subMap.sectors[city.sect-2].getTile((city.loc[1]%9)-1,0).hasOwnableLand()){
+						city.ownedLand.push([city.largeLoc[0],city.largeLoc[1]+1,city.sect-2,(city.loc[1]%9)-1,0]);
+					}
 				}
 				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]+1]).subMap.sectors[city.sect-2].getTile((city.loc[1]%9),0)!=undefined){
 					largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]+1]).subMap.sectors[city.sect-2].getTile((city.loc[1]%9),0).setSuburb(city);
+					
+					if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]+1]).subMap.sectors[city.sect-2].getTile((city.loc[1]%9),0).hasOwnableLand()){
+						city.ownedLand.push([city.largeLoc[0],city.largeLoc[1]+1,city.sect-2,(city.loc[1]%9),0]);
+					}
 				}
 				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]+1]).subMap.sectors[city.sect-2].getTile((city.loc[1]%9)+1,0)!=undefined){
 					largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]+1]).subMap.sectors[city.sect-2].getTile((city.loc[1]%9)+1,0).setSuburb(city);
+					
+					if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]+1]).subMap.sectors[city.sect-2].getTile((city.loc[1]%9)+1,0).hasOwnableLand()){
+						city.ownedLand.push([city.largeLoc[0],city.largeLoc[1]+1,city.sect-2,(city.loc[1]%9)+1,0]);
+					}
 				}
 			}
 		}
 		if(affectUpOffSubMap){
 			if(largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]])!=undefined){
-				if(largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]]).subMap.sectors[city.sect+6].getTile((city.loc[1]%9)-1,(city.loc[0]%9)-1)!=undefined){
-					largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]]).subMap.sectors[city.sect+6].getTile((city.loc[1]%9)-1,(city.loc[0]%9)-1).setSuburb(city);
+				if(largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]]).subMap.sectors[city.sect+6].getTile(8,(city.loc[0]%9)-1)!=undefined){
+					largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]]).subMap.sectors[city.sect+6].getTile(8,(city.loc[0]%9)-1).setSuburb(city);
+					
+					if(largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]]).subMap.sectors[city.sect+6].getTile(8,(city.loc[0]%9)-1).hasOwnableLand()){
+						city.ownedLand.push([city.largeLoc[0]-1,city.largeLoc[1],city.sect+6,8,(city.loc[0]%9)-1]);
+					}
 				}
-				if(largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]]).subMap.sectors[city.sect+6].getTile((city.loc[1]%9),(city.loc[0]%9)-1)!=undefined){
-					largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]]).subMap.sectors[city.sect+6].getTile((city.loc[1]%9),(city.loc[0]%9)-1).setSuburb(city);
+				if(largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]]).subMap.sectors[city.sect+6].getTile(8,(city.loc[0]%9))!=undefined){
+					largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]]).subMap.sectors[city.sect+6].getTile(8,(city.loc[0]%9)).setSuburb(city);
+					
+					if(largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]]).subMap.sectors[city.sect+6].getTile(8,(city.loc[0]%9)).hasOwnableLand()){
+						city.ownedLand.push([city.largeLoc[0]-1,city.largeLoc[1],city.sect+6,8,(city.loc[0]%9)]);
+					}
 				}
-				if(largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]]).subMap.sectors[city.sect+6].getTile((city.loc[1]%9)+1,(city.loc[0]%9)-1)!=undefined){
-					largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]]).subMap.sectors[city.sect+6].getTile((city.loc[1]%9)+1,(city.loc[0]%9)-1).setSuburb(city);
+				if(largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]]).subMap.sectors[city.sect+6].getTile(8,(city.loc[0]%9)+1)!=undefined){
+					largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]]).subMap.sectors[city.sect+6].getTile(8,(city.loc[0]%9)+1).setSuburb(city);
+					
+					if(largeMap.getTileOfID([city.largeLoc[0]-1,city.largeLoc[1]]).subMap.sectors[city.sect+6].getTile(8,(city.loc[0]%9)+1).hasOwnableLand()){
+						city.ownedLand.push([city.largeLoc[0]-1,city.largeLoc[1],city.sect+6,8,(city.loc[0]%9)+1]);
+					}
 				}
 			}
 		}
 		else if(affectDownOffSubMap){
 			if(largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]])!=undefined){
-				if(largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]]).subMap.sectors[city.sect-6].getTile((city.loc[1]%9)-1,(city.loc[0]%9)-1)!=undefined){
-					largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]]).subMap.sectors[city.sect-6].getTile((city.loc[1]%9)-1,(city.loc[0]%9)-1).setSuburb(city);
+				if(largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]]).subMap.sectors[city.sect-6].getTile(0,(city.loc[0]%9)-1)!=undefined){
+					largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]]).subMap.sectors[city.sect-6].getTile(0,(city.loc[0]%9)-1).setSuburb(city);
+					
+					if(largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]]).subMap.sectors[city.sect-6].getTile(0,(city.loc[0]%9)-1).hasOwnableLand()){
+						city.ownedLand.push([city.largeLoc[0]+1,city.largeLoc[1],city.sect-6,0,(city.loc[0]%9)-1]);
+					}
 				}
-				if(largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]]).subMap.sectors[city.sect-6].getTile((city.loc[1]%9),(city.loc[0]%9)-1)!=undefined){
-					largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]]).subMap.sectors[city.sect-6].getTile((city.loc[1]%9),(city.loc[0]%9)-1).setSuburb(city);
+				if(largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]]).subMap.sectors[city.sect-6].getTile(0,(city.loc[0]%9))!=undefined){
+					largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]]).subMap.sectors[city.sect-6].getTile(0,(city.loc[0]%9)).setSuburb(city);
+					
+					if(largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]]).subMap.sectors[city.sect-6].getTile(0,(city.loc[0]%9)).hasOwnableLand()){
+						city.ownedLand.push([city.largeLoc[0]+1,city.largeLoc[1],city.sect-6,0,(city.loc[0]%9)]);
+					}
 				}
-				if(largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]]).subMap.sectors[city.sect-6].getTile((city.loc[1]%9)+1,(city.loc[0]%9)-1)!=undefined){
-					largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]]).subMap.sectors[city.sect-6].getTile((city.loc[1]%9)+1,(city.loc[0]%9)-1).setSuburb(city);
+				if(largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]]).subMap.sectors[city.sect-6].getTile(0,(city.loc[0]%9)+1)!=undefined){
+					largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]]).subMap.sectors[city.sect-6].getTile(0,(city.loc[0]%9)+1).setSuburb(city);
+					
+					if(largeMap.getTileOfID([city.largeLoc[0]+1,city.largeLoc[1]]).subMap.sectors[city.sect-6].getTile(0,(city.loc[0]%9)+1).hasOwnableLand()){
+						city.ownedLand.push([city.largeLoc[0]+1,city.largeLoc[1],city.sect-6,0,(city.loc[0]%9)+1]);
+					}
 				}
 			}
 		}
@@ -308,83 +687,186 @@ var subMapTile = function(parts){
 		if(affectLeftOffSector){
 			if(affectUpOffSector){
 				largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect-4].getTile(8,8).setSuburb(city);
+				//if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect-4].getTile(8,8).parts[8].terrainType=="seawater"){
+				//	this.hasHarbor = true;
+				//}
+				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect-4].getTile(8,8).hasOwnableLand()){
+					city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect-4,8,8]);
+				}
 			}
 			else if(affectDownOffSector){
 				largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect+2].getTile(0,8).setSuburb(city);
+				//if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect+2].getTile(0,8).parts[2].terrainType=="seawater"){
+				//	this.hasHarbor = true;
+				//}
+				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect+2].getTile(0,8).hasOwnableLand()){
+					city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect+2,0,8]);
+				}
 			}
 			if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect-1].getTile((city.loc[1]%9)-1,8)!=undefined){
 				largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect-1].getTile((city.loc[1]%9)-1,8).setSuburb(city);
+				//for(let i = 0; i < 
+				//if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect-1].getTile((city.loc[1]%9)-1,8).parts[8].terrainType=="seawater"){
+				//	this.hasHarbor = true;
+				//}
+				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect-1].getTile((city.loc[1]%9)-1,8).hasOwnableLand()){
+					city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect-1,(city.loc[1]%9)-1,8]);
+				}
 			}
 			if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect-1].getTile((city.loc[1]%9),8)!=undefined){
 				largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect-1].getTile((city.loc[1]%9),8).setSuburb(city);
+				
+				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect-1].getTile((city.loc[1]%9),8).hasOwnableLand()){
+					city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect-1,(city.loc[1]%9),8]);
+				}
 			}
 			if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect-1].getTile((city.loc[1]%9)+1,8)!=undefined){
 				largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect-1].getTile((city.loc[1]%9)+1,8).setSuburb(city);
+				
+				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect-1].getTile((city.loc[1]%9)+1,8).hasOwnableLand()){
+					city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect-1,(city.loc[1]%9)+1,8]);
+				}
 			}
 		}
 		else if(affectRightOffSector){
 			if(affectUpOffSector){
 				largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect-2].getTile(8,0).setSuburb(city);
+				
+				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect-2].getTile(8,0).hasOwnableLand()){
+					city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect-2,8,0]);
+				}
 			}
 			else if(affectDownOffSector){
 				largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect+4].getTile(0,0).setSuburb(city);
+				
+				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect+4].getTile(0,0).hasOwnableLand()){
+					city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect+4,0,0]);
+				}
 			}
 			if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect+1].getTile((city.loc[1]%9)-1,0)!=undefined){
 				largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect+1].getTile((city.loc[1]%9)-1,0).setSuburb(city);
+				
+				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect+1].getTile((city.loc[1]%9)-1,0).hasOwnableLand()){
+					city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect+1,(city.loc[1]%9)-1,0]);
+				}
 			}
 			if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect+1].getTile((city.loc[1]%9),0)!=undefined){
 				largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect+1].getTile((city.loc[1]%9),0).setSuburb(city);
+				
+				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect+1].getTile((city.loc[1]%9),0).hasOwnableLand()){
+					city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect+1,(city.loc[1]%9),0]);
+				}
 			}
 			if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect+1].getTile((city.loc[1]%9)+1,0)!=undefined){
 				largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect+1].getTile((city.loc[1]%9)+1,0).setSuburb(city);
+				
+				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect+1].getTile((city.loc[1]%9)+1,0).hasOwnableLand()){
+					city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect+1,(city.loc[1]%9)+1,0]);
+				}
 			}
 		}
 		if(affectDownOffSector){
 			if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect+3].getTile(0,(city.loc[0]%9)-1)!=undefined && !affectLeftOffSector){
 				largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect+3].getTile(0,(city.loc[0]%9)-1).setSuburb(city);
+				
+				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect+3].getTile(0,(city.loc[0]%9)-1).hasOwnableLand()){
+					city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect+3,0,(city.loc[0]%9)-1]);
+				}
 			}
 			if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect+3].getTile(0,(city.loc[0]%9))!=undefined){
 				largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect+3].getTile(0,(city.loc[0]%9)).setSuburb(city);
+				
+				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect+3].getTile(0,(city.loc[0]%9)).hasOwnableLand()){
+					city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect+3,0,(city.loc[0]%9)]);
+				}
 			}
 			if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect+3].getTile(0,(city.loc[0]%9)+1)!=undefined && !affectRightOffSector){
 				largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect+3].getTile(0,(city.loc[0]%9)+1).setSuburb(city);
+				
+				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect+3].getTile(0,(city.loc[0]%9)+1).hasOwnableLand()){
+					city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect+3,0,(city.loc[0]%9)+1]);
+				}
 			}
 		}
 		else if(affectUpOffSector){
 			if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect-3].getTile(8,(city.loc[0]%9)-1)!=undefined && !affectLeftOffSector){
 				largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect-3].getTile(8,(city.loc[0]%9)-1).setSuburb(city);
+				
+				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect-3].getTile(8,(city.loc[0]%9)-1).hasOwnableLand()){
+					city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect-3,8,(city.loc[0]%9)-1]);
+				}
 			}
 			if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect-3].getTile(8,(city.loc[0]%9))!=undefined){
 				largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect-3].getTile(8,(city.loc[0]%9)).setSuburb(city);
+				
+				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect-3].getTile(8,(city.loc[0]%9)).hasOwnableLand()){
+					city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect-3,8,(city.loc[0]%9)]);
+				}
 			}
 			if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect-3].getTile(8,(city.loc[0]%9)+1)!=undefined && !affectRightOffSector){
 				largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect-3].getTile(8,(city.loc[0]%9)+1).setSuburb(city);
+				
+				if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect-3].getTile(8,(city.loc[0]%9)+1).hasOwnableLand()){
+					city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect-3,8,(city.loc[0]%9)+1]);
+				}
 			}
 		}
 		
 		if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect].getTile((city.loc[1]%9)-1,(city.loc[0]%9)-1)!=undefined && !affectLeftOffSubMap && !affectUpOffSubMap && !affectLeftOffSector && !affectUpOffSector){
 			largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect].getTile((city.loc[1]%9)-1,(city.loc[0]%9)-1).setSuburb(city);
+			
+			if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect].getTile((city.loc[1]%9)-1,(city.loc[0]%9)-1).hasOwnableLand()){
+				city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect,(city.loc[1]%9)-1,(city.loc[0]%9)-1]);
+			}
 		}
 		if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect].getTile((city.loc[1]%9)-1,(city.loc[0]%9))!=undefined && !affectUpOffSubMap && !affectUpOffSector){
 			largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect].getTile((city.loc[1]%9)-1,(city.loc[0]%9)).setSuburb(city);
+			
+			if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect].getTile((city.loc[1]%9)-1,(city.loc[0]%9)).hasOwnableLand()){
+				city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect,(city.loc[1]%9)-1,(city.loc[0]%9)]);
+			}
 		}
 		if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect].getTile((city.loc[1]%9)-1,(city.loc[0]%9)+1)!=undefined && !affectRightOffSubMap && !affectUpOffSubMap && !affectUpOffSector && !affectRightOffSector){
 			largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect].getTile((city.loc[1]%9)-1,(city.loc[0]%9)+1).setSuburb(city);
+			
+			if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect].getTile((city.loc[1]%9)-1,(city.loc[0]%9)+1).hasOwnableLand()){
+				city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect,(city.loc[1]%9)-1,(city.loc[0]%9)+1]);
+			}
 		}
 		if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect].getTile((city.loc[1]%9),(city.loc[0]%9)-1)!=undefined && !affectLeftOffSubMap && !affectLeftOffSector){
 			largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect].getTile((city.loc[1]%9),(city.loc[0]%9)-1).setSuburb(city);
+			
+			if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect].getTile((city.loc[1]%9),(city.loc[0]%9)-1).hasOwnableLand()){
+				city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect,(city.loc[1]%9),(city.loc[0]%9)-1]);
+			}
 		}
 		if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect].getTile((city.loc[1]%9)+1,(city.loc[0]%9)-1)!=undefined && !affectLeftOffSubMap && !affectDownOffSubMap && !affectLeftOffSector  && !affectDownOffSector){
 			largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect].getTile((city.loc[1]%9)+1,(city.loc[0]%9)-1).setSuburb(city);
+			
+			if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect].getTile((city.loc[1]%9)+1,(city.loc[0]%9)-1).hasOwnableLand()){
+				city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect,(city.loc[1]%9)+1,(city.loc[0]%9)-1]);
+			}
 		}
 		if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect].getTile((city.loc[1]%9)+1,(city.loc[0]%9))!=undefined && !affectDownOffSubMap && !affectDownOffSector){
 			largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect].getTile((city.loc[1]%9)+1,(city.loc[0]%9)).setSuburb(city);
+			
+			if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect].getTile((city.loc[1]%9)+1,(city.loc[0]%9)).hasOwnableLand()){
+				city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect,(city.loc[1]%9)+1,(city.loc[0]%9)]);
+			}
 		}
 		if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect].getTile((city.loc[1]%9)+1,(city.loc[0]%9)+1)!=undefined && !affectRightOffSubMap && !affectDownOffSubMap && !affectRightOffSector && !affectDownOffSector){
 			largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect].getTile((city.loc[1]%9)+1,(city.loc[0]%9)+1).setSuburb(city);
+			
+			if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect].getTile((city.loc[1]%9)+1,(city.loc[0]%9)+1).hasOwnableLand()){
+				city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect,(city.loc[1]%9)+1,(city.loc[0]%9)+1]);
+			}
 		}
 		if(largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect].getTile((city.loc[1]%9),(city.loc[0]%9)+1)!=undefined && !affectRightOffSubMap && !affectRightOffSector){
 			largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect].getTile((city.loc[1]%9),(city.loc[0]%9)+1).setSuburb(city);
+			
+			if(largeMap.getTileOfID([city.largeLoc[0],city.largeLoc[1]]).subMap.sectors[city.sect].getTile((city.loc[1]%9),(city.loc[0]%9)+1).hasOwnableLand()){
+				city.ownedLand.push([city.largeLoc[0],city.largeLoc[1],city.sect,(city.loc[1]%9),(city.loc[0]%9)+1]);
+			}
 		}
 		largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect].hasCity = true;
 		//largeMap.getTileOfID(city.largeLoc).subMap.sectors[city.sect+2].getTile((city.loc[1]%9)-1,8).setSuburb(city);
@@ -491,6 +973,9 @@ var subMapSector = function(tiles){//a subMapSector is a 9x9 area of subMapTiles
 			return "";
 		}
 		else{
+			if(visOwner[0]!=undefined){
+				return visOwner[0].tag;
+			}
 			return visOwner[0];
 		}
 	}
@@ -565,6 +1050,7 @@ var largeMap;
 var curView = "BLANK";
 
 function drawMap(){
+	unshowCountryName();
 	var myHTML = "";
 	var rows = largeMap.rows;
 	for(let i = 0; i < rows.length; i++){
@@ -575,10 +1061,10 @@ function drawMap(){
 			}*/
 			for(let k = 0; k < rows[i].tiles[j].parts.length; k++){
 				if(rows[i].tiles[j].parts[k].type=="seawater"){
-					myHTML+="<span id=\"seawater\">■</span>";
+					myHTML+="<span id=\"seawater\" onmouseover=\"unshowCountryName()\">■</span>";
 				}
 				else if(rows[i].tiles[j].parts[k].type=="lakewater"){
-					myHTML+="<span id=\"lakewater\">■</span>";
+					myHTML+="<span id=\"lakewater\" onmouseover=\"unshowCountryName()\">■</span>";
 				}
 				else{
 					if(curView=="CITIES"){
@@ -590,7 +1076,8 @@ function drawMap(){
 						}
 					}
 					else if(curView=="POLITICAL"){
-						myHTML+="<span class=\"" + rows[i].tiles[j].parts[k].overAllOwner() + "\">■</span>"
+						let z = rows[i].tiles[j].parts[k].overAllOwner();
+						myHTML+="<span class=\"" + z + "\" onmouseover=\"showCountryName(\'" + z + "\')\">■</span>"
 					}
 					else if(curView=="PHYSICAL"){
 						myHTML+="<span id=\"" + rows[i].tiles[j].parts[k].type + "\">■</span>"
@@ -622,26 +1109,136 @@ function drawMap(){
 		}
 		myHTML+="<br>"
 	}
-	myHTML += "<div id=\"subMapBox\"></div>"
+	//myHTML += "<div id=\"cityNameBox\"></div>"
 	document.getElementById("map").innerHTML = myHTML;
+	if(curView=="POLITICAL"){
+		for(let i = 0; i < countryTags.length;i++){
+			var y = document.getElementsByClassName(countryTags[i]);
+			for(let j = 0; j < y.length;j++){
+				y[j].style.color = countryColors[i];
+			}
+		}
+	}
 	if(subMapOpen){
 		openSubMap(curSubMap);
 	}
 }
 
-function openSubMap(id){//view is centered on id
-	var myHTML = "";
-	//var myFullMap = "";// = "<div id=\"subMapDisplay\">";
-	for(let h = 0; h < largeMap.rows.length; h++){
-		var mySubMapRows = "<div id=\"subMapRow\">";
-	for(let i = 0; i < largeMap.rows[h].tiles.length; i++){
-		var mySubMaps = "<div id=\"subMapDisplay\">";
+/*function redrawSubMap(id){
+	if(!subMapOpen){
+		return;
+	}
+	for(let j = 0; j < 9; j++){
+		for(let k = 0; k < 8; k++){
+			for(let l = 0; l < 8; l++){
+				redrawTile([id[0],id[1],j,k,l]);
+			}
+		}
+	}
+}*/
+
+/*function redrawSubMap(id){
+	if(!subMapOpen){
+		return;
+	}
+	return new Promise(resolve => {
+	var myHTML = "";//"<div id=\"subMapDisplay\" class=\"" + id[0] + "" + id[1] + "\">";
 	for(let j = 0; j < 9; j++){
 		var myBigRow = "";
 		for(let k = 0; k < 9; k++){
 			var myRow = "";
 			for(let l = 0; l < 9; l++){//class=tile*largeMapRow**largeMapCol**subMapSector**sectorRow**sectorCol* 
-				var myTile = "<div id=\"MapTile\" class=\"tile" + h + "" + i + "" + j + "" + k + "" + l + "\">";
+				var myTile = "<div id=\"MapTile\" class=\"tile" + id[0] + "" + id[1] + "" + j + "" + k + "" + l + "\">";
+				for(let m = 0; m < 9; m++){
+					if(largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).troops[m]!=undefined){
+						myTile += "<span class=\"troops\">" + largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).troops[m].getIcon() + "</span>";
+					}
+					else if(curView=="DEVELOPMENT"){
+						if(largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="seawater" || largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="lakewater"){
+							myTile += "<span id=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\">■</span>"
+						}
+						else{
+							myTile += "<span id=\"dev" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].development + "\">■</span>"
+						}
+					}
+					else if(curView=="CITIES"){
+						if(largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="seawater" || largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="lakewater"){
+							myTile += "<span id=\"" + largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\">■</span>"
+						}
+						else if(largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).isCity){
+							myTile += "<span id=\"city\">■</span>";
+						}
+						else if(largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).isSuburb){
+							myTile += "<span id=\"suburb\">■</span>";
+						}
+						else{
+							myTile += "<span id=\"noCity\">■</span>";
+						}
+					}
+					else if(curView=="PHYSICAL"){
+						myTile += "<span id=\"" + largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\">■</span>"
+					}
+					else if(curView=="POLITICAL"){
+						if(largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="seawater" || largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="lakewater"){
+							myTile += "<span id=\"" + largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\">■</span>"
+						}
+						else{
+							myTile += "<span class=\"" + largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).parts[m].owner + "\">■</span>"
+						}
+					}
+					else{
+						if(largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="seawater" || largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="lakewater"){
+							myTile += "<span id=\"" + largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\">■</span>"
+						}
+						else{
+							myTile+="<span id=\"inland\">■</span>";
+						}
+					}
+					if(m+1 < 9 && (m+1)%3==0){
+						myTile += "<br>";
+					}
+				}
+				myRow += myTile + "</div>";
+				myTile = "<div id=\"MapTile\">";
+			}
+			myBigRow += myRow + "<br>";
+			myRow = "";
+		}
+		myHTML += "<div id=\"subMapSector\">" + myBigRow + "</div>";
+		if(j+1 < 9 && (j+1)%3==0){
+			myHTML += "<br>";
+		}
+		myBigRow = "";
+	}
+	//myHTML += "</div>";
+	var x = document.getElementsByClassName("subMapDisplay" + id[0] + "" + id[1])[0];
+	x.innerHTML = myHTML;
+	})
+}*/
+
+function openSubMap(id){//view is centered on id
+	unshowCountryName();
+	var myHTML = "";
+	//var myFullMap = "";// = "<div id=\"subMapDisplay\">";
+	for(let h = 0; h < largeMap.rows.length; h++){
+		var mySubMapRows = "<div id=\"subMapRow\">";
+	for(let i = 0; i < largeMap.rows[h].tiles.length; i++){
+		var mySubMaps = "<div id=\"subMapDisplay\" class=\"subMapDisplay" + h + "" + i + "\">";
+	for(let j = 0; j < 9; j++){
+		var myBigRow = "";
+		for(let k = 0; k < 9; k++){
+			var myRow = "";
+			for(let l = 0; l < 9; l++){//class=tile*largeMapRow**largeMapCol**subMapSector**sectorRow**sectorCol* 
+				var myTile = "<div id=\"MapTile\" class=\"tile" + h + "" + i + "" + j + "" + k + "" + l + "";
+				if(curView=="CITY_BUILDER"){
+					myTile += " cityBuildTarget\"";
+					myTile += " onmouseover=\"highlightTile([" + h + "," + i + "," + j + "," + k + "," + l + "])\"";
+					myTile += " onclick=\"SelectTile([" + h + "," + i + "," + j + "," + k + "," + l + "])\"";
+				}
+				else{
+					myTile+="\"";
+				}
+				myTile+=">";
 				for(let m = 0; m < 9; m++){
 					if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).troops[m]!=undefined){
 						myTile += "<span class=\"troops\">" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).troops[m].getIcon() + "</span>";
@@ -656,16 +1253,31 @@ function openSubMap(id){//view is centered on id
 					}
 					else if(curView=="CITIES"){
 						if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="seawater" || largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="lakewater"){
-							myTile += "<span id=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\">■</span>"
+							myTile += "<span id=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\" onmouseover=\"deselectCity()\">■</span>"
 						}
 						else if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).isCity){
-							myTile += "<span id=\"city\">■</span>";
+							if(selectedCity!=undefined && cityArr[selectedCity].owns([h,i,j,k,l])){
+								myTile += "<span id=\"selectedCity\">■</span>";
+							}
+							else{
+								myTile += "<span id=\"city\" onmouseover=\"selectCity([" + h + "," + i + "," + j + "," + k + "," + l + "])\">■</span>";
+							}
 						}
 						else if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).isSuburb){
-							myTile += "<span id=\"suburb\">■</span>";
+							if(selectedCity!=undefined && cityArr[selectedCity].owns([h,i,j,k,l])){
+								myTile += "<span id=\"selectedSuburb\">■</span>";
+							}
+							else{
+								myTile += "<span id=\"suburb\" onmouseover=\"selectCity([" + h + "," + i + "," + j + "," + k + "," + l + "])\">■</span>";
+							}
 						}
 						else{
-							myTile += "<span id=\"noCity\">■</span>";
+							if(selectedCity!=undefined && cityArr[selectedCity].owns([h,i,j,k,l])){
+								myTile += "<span id=\"selectedOtherOwned\">■</span>";
+							}
+							else{
+								myTile += "<span id=\"noCity\" onmouseover=\"deselectCity()\">■</span>";
+							}
 						}
 					}
 					else if(curView=="PHYSICAL"){
@@ -673,10 +1285,30 @@ function openSubMap(id){//view is centered on id
 					}
 					else if(curView=="POLITICAL"){
 						if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="seawater" || largeMap.getTileOfID(id).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="lakewater"){
+							myTile += "<span id=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\" onmouseover=\"unshowCountryName()\">■</span>"
+						}
+						else{
+							let z = largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].owner;
+							if(z==undefined){
+								myTile += "<span class=\"" + z + "\" onmouseover=\"unshowCountryName()\">■</span>";
+							}
+							else{
+								myTile += "<span class=\"" + z.tag + "\" onmouseover=\"showCountryName(\'" + z.tag + "\')\">■</span>";
+							}
+						}
+					}
+					else if(curView=="CITY_BUILDER"){
+						if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="seawater" || largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="lakewater"){
 							myTile += "<span id=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\">■</span>"
 						}
 						else{
-							myTile += "<span class=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].owner + "\">■</span>"
+							if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).isSettlableLand() &&
+							   largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).owner==undefined){
+								myTile += "<span id=\"cityBuildable\">■</span>"
+							}
+							else{
+								myTile += "<span id=\"cityUnbuildable\">■</span>"
+							}
 						}
 					}
 					else{
@@ -707,11 +1339,83 @@ function openSubMap(id){//view is centered on id
 	mySubMapRows += mySubMaps + "</div>"
 	mySubMaps = "<div id=\"subMapDisplay\">";
 	}
-	myHTML += mySubMapRows + "<br>";
+	myHTML += mySubMapRows + "</div><br>";
 	mySubMapRows = "<div id=\"subMapRow\">";
 	}
+	//myHTML += "<div id=\"cityNameBox\"></div>"
 	document.getElementById("map").innerHTML = myHTML;
+	if(curView=="POLITICAL"){
+		for(let i = 0; i < countryTags.length;i++){
+			var y = document.getElementsByClassName(countryTags[i]);
+			for(let j = 0; j < y.length;j++){
+				y[j].style.color = countryColors[i];
+			}
+		}
+	}
 	subMapOpen = true;
+}
+
+var selectedCity = undefined;
+
+function selectCity(owningTile){
+	for(let i = 0; i < cityArr.length; i++){
+		if(cityArr[i].owns(owningTile)){
+			selectedCity = i;
+			//drawMap();
+			var z = document.getElementById("cityNameBox");
+			if(z!=undefined){
+				z.innerHTML = cityArr[i].name + "<br>(" + cityArr[i].owner.name + ")";
+				z.style.display = "block";
+				for(let j = 0; j < cityArr[i].ownedLand.length; j++){
+					redrawTile(cityArr[i].ownedLand[j]);
+				}
+			}
+			return;
+		}
+	}
+}
+
+function deselectCity() {
+	if(selectedCity==undefined){
+		return;
+	}
+	var hold = selectedCity;
+	selectedCity = undefined;
+	var z = document.getElementById("cityNameBox");
+	if(z!=undefined){
+		z.style.display = "none";
+		for(let j = 0; j < cityArr[hold].ownedLand.length; j++){
+			redrawTile(cityArr[hold].ownedLand[j]);
+		}
+	}
+	return;
+}
+
+function showCountryName(tag){
+	var z = document.getElementById("cityNameBox");
+	var country = findCountry(tag);
+	var name;
+	if(country!=undefined){
+		name = country.name;
+	}
+	if(z!=undefined && name!=undefined){
+		z.innerHTML = name;
+		z.style.display = "block";
+	}
+	return;
+}
+
+function unshowCountryName(){
+	var z = document.getElementById("cityNameBox");
+	if(z!=undefined){
+		z.style.display = "none";
+	}
+	return;
+}
+
+function mouseOffMap(){
+	unshowCountryName();
+	deselectCity();
 }
 
 function redrawTile(coords){//[largeMapRow,largeMapCol,subMapSector,sectorRow,sectorCol]
@@ -744,16 +1448,31 @@ function redrawTile(coords){//[largeMapRow,largeMapCol,subMapSector,sectorRow,se
 		}
 		else if(curView=="CITIES"){
 			if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="seawater" || largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="lakewater"){
-				myTile += "<span id=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\">■</span>"
+				myTile += "<span id=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\" onmouseover=\"deselectCity()\">■</span>"
 			}
 			else if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).isCity){
-				myTile += "<span id=\"city\">■</span>";
+				if(selectedCity!=undefined && cityArr[selectedCity].owns([h,i,j,k,l])){
+					myTile += "<span id=\"selectedCity\">■</span>";
+				}
+				else{
+					myTile += "<span id=\"city\" onmouseover=\"selectCity([" + h + "," + i + "," + j + "," + k + "," + l + "])\">■</span>";
+				}
 			}
 			else if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).isSuburb){
-				myTile += "<span id=\"suburb\">■</span>";
+				if(selectedCity!=undefined && cityArr[selectedCity].owns([h,i,j,k,l])){
+					myTile += "<span id=\"selectedSuburb\">■</span>";
+				}
+				else{
+					myTile += "<span id=\"suburb\" onmouseover=\"selectCity([" + h + "," + i + "," + j + "," + k + "," + l + "])\">■</span>";
+				}
 			}
 			else{
-				myTile += "<span id=\"noCity\">■</span>";
+				if(selectedCity!=undefined && cityArr[selectedCity].owns([h,i,j,k,l])){
+					myTile += "<span id=\"selectedOtherOwned\">■</span>";
+				}
+				else{
+					myTile += "<span id=\"noCity\" onmouseover=\"deselectCity()\">■</span>";
+				}
 			}
 		}
 		else if(curView=="PHYSICAL"){
@@ -765,6 +1484,20 @@ function redrawTile(coords){//[largeMapRow,largeMapCol,subMapSector,sectorRow,se
 			}
 			else{
 				myTile += "<span class=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].owner + "\">■</span>"
+			}
+		}
+		else if(curView=="CITY_BUILDER"){
+			if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="seawater" || largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType=="lakewater"){
+				myTile += "<span id=\"" + largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).parts[m].terrainType + "\">■</span>"
+			}
+			else{
+				if(largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).isSettlableLand() &&
+				   largeMap.getTileOfID([h,i]).subMap.sectors[j].getTile(k,l).owner==undefined){
+					myTile += "<span id=\"cityBuildable\">■</span>"
+				}
+				else{
+					myTile += "<span id=\"cityUnbuildable\">■</span>"
+				}
 			}
 		}
 		else{
@@ -865,6 +1598,7 @@ function redrawTile(coords){//[largeMapRow,largeMapCol,subMapSector,sectorRow,se
 function closeSubmap(){
 	//document.getElementById("subMapBox").style.display = "none";
 	subMapOpen = false;
+	selectedCity = undefined;
 	drawMap();
 }
 
@@ -872,29 +1606,64 @@ var subMapOpen = false;
 var curSubMap = [0,0];
 
 function showPolitical() {
+	if(curView == "CITY_BUILDER"){
+		return;
+	}
 	curView = "POLITICAL";
 	drawMap();
+	/*for(let i = 0; i < largeMap.rows.length; i++){
+		for(let j = 0; j < largeMap.rows[i].tiles.length; j++){
+			let k = redrawSubMap([i,j]);
+		}
+	}*/
 }
 
 function showBlank() {
+	if(curView == "CITY_BUILDER"){
+		return;
+	}
 	curView = "BLANK";
 	drawMap();
 }
 
 function showPhysical() {
+	if(curView == "CITY_BUILDER"){
+		return;
+	}
 	curView = "PHYSICAL";
 	drawMap();
 }
 
 function showCities() {
+	if(curView == "CITY_BUILDER"){
+		return;
+	}
 	curView = "CITIES";
 	drawMap();
 }
 
 function showDevelopment() {
+	if(curView == "CITY_BUILDER"){
+		return;
+	}
 	curView = "DEVELOPMENT";
 	drawMap();
 }
+
+function showCityBuildMode() {
+	curView = "CITY_BUILDER"
+	drawMap();
+}
+
+function findCity(cityName){
+	for(let i = 0; i < cityArr.length; i++){
+		if(cityArr[i].name==cityName){
+			return cityArr[i];
+		}
+	}
+	return;
+}
+
 //Tests
 function TestShowingTroops() {//just tests to ensure troops visible
 	var t = new division(500,"infantry");
@@ -906,19 +1675,41 @@ function TestShowingTroops() {//just tests to ensure troops visible
 
 function TestShowingTroops2() {//tests deploying troops
 	var t = new division(500,"infantry");
-	t.deploy(cityArr[3]);
+	t.deploy(findCity("Ontario"));
 }
 
 function TestMarchNY2PHIL() {//tests troops marching
 	var t = new division(500,"infantry");
-	t.deploy(cityArr[1]);
-	t.setMarchToCity(cityArr[0]);
+	t.deploy(findCity("New York"));
+	t.setMarchToCity(findCity("Philadelphia"));
 }
 
 function TestMarchNY2MOS() {//tests troops marching around water
 	var t = new division(500,"artillery");
-	t.deploy(cityArr[1]);
-	t.setMarchToCity(cityArr[4]);
+	t.deploy(findCity("New York"));
+	t.setMarchToCity(findCity("Moscow"));
+}
+
+function TestMarchNY2BEJ() {//tests troops marching around water
+	var t = new division(500,"cavalry");
+	t.deploy(findCity("New York"));
+	t.setMarchToCity(findCity("Beijing"));
+}
+
+function TestShowingNavies(){//just tests to ensure navies visible
+	var t = new ship(500,"transport");
+	var u = new ship(500,"warship");
+	var v = new ship(500,"flagship");
+	largeMap.getTileOfID([0,0]).subMap.sectors[6].getTile(3,3).setTroops([t,undefined,u,undefined,v,undefined,t,undefined,u],[0,0,6,3,3])
+	drawMap();
+}
+
+function TestGrowingBorders(){//tests borders growing over time
+	//return;//not yet implemented
+	for(let i = 0; i < cityArr.length; i++){
+		cityArr[i].growOwnership();
+	}
+	drawMap();
 }
 
 window.onload = function(){
@@ -972,15 +1763,30 @@ window.onload = function(){
 	//var z2 = new subMapSector([y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2,y2]);
 	var v = new subMap([z.copy(),z3.copy(),z4.copy(),z2.copy(),z.copy(),z3.copy(),z2.copy(),z2.copy(),z.copy()]);
 	var q = new subMap([z3.copy(),z3.copy(),z3.copy(),z3.copy(),z2.copy(),z3.copy(),z3.copy(),z2.copy(),z3.copy()]);
+	var r = new subMap([z3.copy(),z3.copy(),z3.copy(),z3.copy(),z3.copy(),z3.copy(),z3.copy(),z3.copy(),z3.copy()]);
+	var s = new subMap([z2.copy(),z2.copy(),z2.copy(),z2.copy(),z2.copy(),z2.copy(),z2.copy(),z2.copy(),z2.copy()]);
+	var t = new subMap([z.copy(),z2.copy(),z3.copy(),z2.copy(),z2.copy(),z3.copy(),z3.copy(),z3.copy(),z3.copy()]);
+	var w = new subMap([z3.copy(),z3.copy(),z3.copy(),z3.copy(),z3.copy(),z3.copy(),z3.copy(),z3.copy(),z3.copy()]);
 	var a = new tile(v);
 	var e = new tile(q);
-	var b = new row([a,e]);
-	largeMap = new map([b]);
+	var i = new tile(r);
+	var j = new tile(s);
+	var k = new tile(t);
+	var w2 = new tile(w);
+	var b = new row([a,e,i]);
+	var l = new row([j,k,w2]);
+	largeMap = new map([b,l]);
 	var c = new city("Philadelphia",[20,3],[0,0],"USA");
 	var d = new city("New York",[0,20],[0,1],"USA");
-	var f = new city("Chicago",[26,5],[0,0],"USA");
+	//var f = new city("Chicago",[26,5],[0,0],"USA");
 	var g = new city("Ontario",[18,8],[0,0],"Canada");
 	var h = new city("Moscow",[26,0],[0,1],"Russia");
+	var m = new city("Beijing",[18,12],[1,1],"China");
+	//var n = new city("Nanjing",[26,8],[1,1],"China")
+	//var n = new city("Oslo",[8,7],[1,1],"Norway");
+	//var o = new city("Trondheim",[8,18],[1,1],"Norway");
+	//var p = new city("St.Petersburg",[24,4],[0,2],"Russia");*/
+	//fnopu
 	//var d = new city("testia2",[9,7],[0,0]);
 	//var e = new city("testia3",[2,0],[0,0]);
 	drawMap();

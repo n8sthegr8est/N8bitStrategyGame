@@ -9,6 +9,8 @@
 	width: 100%;
 	height: 4%;
 	display: flex;
+	/*white-space: nowrap;
+	overflow-x: scroll;*/
 }
 
 #map,#x_map {
@@ -21,8 +23,9 @@
 	color: white;
 	font-family: "Lucida Console",monospace;
 	line-height: 0.65em;
-	overflow-x: hidden;
-	white-space: nowrap
+	overflow-x: auto;
+	overflow-y: auto;
+	white-space: nowrap;
 }
 
 #MapTile {
@@ -33,6 +36,21 @@
 	border: solid;
 	border-width: 1px;
 	/*transform: scale(1, 0.65);*/
+}
+
+#cityBuildable {
+	color: 84ff00;
+	cursor: pointer;
+}
+
+#cityUnbuildable {
+	color: d90000;
+}
+
+.cityBuildTarget:hover, .cityBuildSelected {
+	margin: -2px -2px -2px -2px;
+	border: 2px solid;
+	border-color: red;
 }
 
 #MapTile.expandable:hover {
@@ -64,11 +82,11 @@
 }
 
 #lakewater {
-	color: Aquamarine;
+	color: 7fffd4;
 }
 
 #seawater {
-	color: blue;
+	color: 0000ff;
 }
 
 #coastland {
@@ -96,6 +114,102 @@
 }
 #noCity {
 	color: 969696;
+}
+#selectedCity {
+	color: f5a142;
+}
+#selectedSuburb {
+	color: c78b48;
+}
+#selectedOtherOwned{
+	color: 825c31;
+}
+#cityNameBox{
+	display: none;
+	border: solid;
+	border-width: 2px;
+	padding: 5px;
+	position: fixed;
+	top: 90%;
+	left: 5%;
+	height: auto;
+	width: auto;
+	color: white;
+	background-color: black;
+	z-index: 1;
+	line-height: 1em;
+	text-align: center;
+	font-family: "Lucida Console",monospace;
+}
+
+#cityCreateBox{
+	display: none;
+	border: solid;
+	border-width: 2px;
+	padding: 5px;
+	position: fixed;
+	bottom: 0%;
+	right: 0%;
+	height: 94%;
+	width: 45%;
+	color: white;
+	background-color: black;
+	z-index: 1;
+	line-height: 1em;
+	text-align: center;
+	font-family: "Lucida Console",monospace;
+}
+
+#cityCreateBox .C_B_Seg {
+	position: relative;
+	width: 100%;
+	min-height: 5%;
+	text-align: left;
+}
+#cityCreateBox #C_moveButton{
+	position: relative;
+	left: 1%;
+	width: 5%;
+	border: 2px solid;
+	background-color: black;
+}
+#cityCreateBox #C_moveButton:hover,#C_Confirm:hover,#C_Cancel:hover{
+	color: red;
+	background-color: white;
+	cursor: pointer;
+}
+#cityCreateBox #C_Name {
+	position: relative;
+	width: 80%;
+}
+#cityCreateBox #C_Own {
+	position: relative;
+	width: 80%;
+}
+#cityCreateBox .C_Coord {
+	position: relative;
+	width: 18%;
+}
+#cityCreateBox #C_ConfCanc {
+	white-space: nowrap;
+	text-align: center;
+}
+#cityCreateBox #C_Confirm {
+	padding: 3px;
+	border: 2px solid;
+	width: 48%;
+	position: relative;
+	float: left;
+}
+#cityCreateBox #C_Cancel {
+	padding: 3px;
+	border: 2px solid;
+	width: 48%;
+	position: relative;
+	float: right;
+}
+#cityCreateBox #C_ErrorMsg {
+	color: ff0000;
 }
 
 #dev0 {/*development map*/
@@ -136,6 +250,8 @@ img {
 	width: 100%;
 	height: 100%;
 }
+
+/*plan number of countries to allow*/
 
 .USA {
 	color: 6ab0d1;

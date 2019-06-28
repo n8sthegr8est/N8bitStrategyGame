@@ -6,10 +6,13 @@
 		<link rel="stylesheet" type="text/css" href="game.css">
 		<script src="map2.js"></script>
 		<script src="military.js"></script>
+		<script src="navy.js"></script>
+		<script src="cityBuilder.js"></script>
+		<script src="countries.js"></script>
 		<meta charset="UTF-8">
 	</head>
 	<body>
-		<div id="Header">
+		<div id="Header" onmouseover="mouseOffMap()">
 			<div class="control" id="zoomOut" onclick="zoomOut()">-</div>
 			<div class="control" id="zoomIn" onclick="zoomIn()">+</div>
 			<div class="display" id="political" onclick="showPolitical()">Political</div>
@@ -26,10 +29,43 @@
 			<div class="display" id="physical" onclick="TestShowingTroops2()">deploy2</div>
 			<div class="display" id="physical" onclick="TestMarchNY2PHIL()">March1</div>
 			<div class="display" id="physical" onclick="TestMarchNY2MOS()">March2</div>
+			<div class="display" id="physical" onclick="TestMarchNY2BEJ()">March3</div>
+			Navy Tests:
+			<div class="display" id="physical" onclick="TestShowingNavies()">deploy1</div>
+			BorderTests:
+			<div class="display" id="grow" onclick="TestGrowingBorders()">GrowAllBorders</div>
+			City Tests:
+			<div class="display" id="cityBuild" onclick="OpenCityBuilder()">MakeNewCity</div>
 		</div>
 		<div id="map">
 			...Loading Map...
 			<!--div id="subMapBox"-->
+			<!--/div-->
+		</div>
+		<div id="cityNameBox"></div>
+		<div id="cityCreateBox">
+			<div id="C_moveButton" onclick="switchCityCreateBoxSide()">L/R</div>
+			<div id="C_Namer" class="C_B_Seg">
+				City Name:<br>
+				<input type="text" id="C_name">
+			</div>
+			<div id="C_setOwner" class="C_B_Seg">
+				City Owner:<br>
+				<input type="text" id="C_own">
+			</div>
+			<div id="C_Coords" class="C_B_Seg">
+				City Coordinates:<br>
+				<input type="text" id="C_Coord_h" class="C_Coord" readonly>
+				<input type="text" id="C_Coord_i" class="C_Coord" readonly>
+				<input type="text" id="C_Coord_j" class="C_Coord" readonly>
+				<input type="text" id="C_Coord_k" class="C_Coord" readonly>
+				<input type="text" id="C_Coord_l" class="C_Coord" readonly>
+			</div>
+			<div id="C_ConfCanc" class="C_B_Seg">
+				<div id="C_Confirm" onclick="BuildCity()">Confirm</div>
+				<div id="C_Cancel" onclick="CloseCityBuilder()">Cancel</div>
+			</div>
+			<div id="C_ErrorMsg" class="C_B_Seg">
 			</div>
 		</div>
 		<!--div id="x_map">
