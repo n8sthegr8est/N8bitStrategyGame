@@ -12,9 +12,20 @@ var terrains = function(){
 	this.sea = "seawater";//the sea
 	this.lake = "lakewater";//a lake
 	this.beachS = "sandy beach";//a beach made from sand
+	//this.ice = "ice";//a field of ice. Impassable by ships, unfavorable for infantry, unsettlable.
 }
 
 var cityArr = [];
+
+var abstractCity = function(name,owner,coords){
+	this.name = name;
+	this.owner = owner;
+	this.coords = coords;
+	
+	this.realize = () => {
+		createNewCity(this.name,this.owner,this.coords);
+	}
+}
 
 function createNewCity(name,owner,coords){//currently, this simply makes a city being given the default coordinate scheme.
 	var thisLargeLoc = [coords[0],coords[1]];//plan to remove once city code rewritten to use that instead.
@@ -463,7 +474,7 @@ var subMapTile = function(parts){
 	this.isSettlableLand = () => {
 		let x = 0;
 		for(let i = 0; i < 9; i++){
-			if(this.parts[i].terrainType!="seawater"){
+			if(this.parts[i].terrainType!="seawater" && this.parts[i].terrainType!="ice" && this.parts[i].terrainType!="lakewater"){
 				x++;
 			}
 		}
@@ -1004,6 +1015,15 @@ var subMapSector = function(tiles){//a subMapSector is a 9x9 area of subMapTiles
 
 var subMap = function(sectors){//submaps are 27x27 subMapTiles, with each part of a normal tile being 9x9 subMapTiles.
 	this.sectors = sectors;
+	
+	this.copy = () => {
+		var copiedSectors = [];
+		this.sectors.forEach(function(elem){
+			copiedSectors.push(elem.copy());
+		});
+		var x = new subMap(copiedSectors);
+		return x;
+	}
 }
 
 var part = function(sector){
@@ -1024,6 +1044,11 @@ var tile = function(subMap){
 	this.parts = [new part(this.subMap.sectors[0]),new part(this.subMap.sectors[1]),new part(this.subMap.sectors[2]),
 				  new part(this.subMap.sectors[3]),new part(this.subMap.sectors[4]),new part(this.subMap.sectors[5]),
 				  new part(this.subMap.sectors[6]),new part(this.subMap.sectors[7]),new part(this.subMap.sectors[8])];
+	
+	this.copy = () => {
+		var x = new tile(subMap.copy());
+		return x;
+	}
 }
 
 var row = function(tiles){
@@ -1715,7 +1740,8 @@ function TestGrowingBorders(){//tests borders growing over time
 	drawMap();
 }
 
-window.onload = function(){
+//window.onload = function(){
+function LoadTestMap(){
 	var x = new smallestPart("seawater");
 	var x2 = new smallestPart("beachS");
 	var x3 = new smallestPart("plains");

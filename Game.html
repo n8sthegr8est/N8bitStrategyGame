@@ -9,6 +9,9 @@
 		<script src="navy.js"></script>
 		<script src="cityBuilder.js"></script>
 		<script src="countries.js"></script>
+		<script src="MapLoadScript.js"></script>
+		<script src="MapPresets.js"></script>
+		<script src="CountryCreateScript.js"></script>
 		<meta charset="UTF-8">
 	</head>
 	<body>
@@ -67,6 +70,45 @@
 			</div>
 			<div id="C_ErrorMsg" class="C_B_Seg">
 			</div>
+		</div>
+		<div id="mapLoadBox">
+			<select id="mL_menu" onchange="mL_contentify()">
+				<option value="Preset">Presets</option>
+				<option value="Random">Randomizer</option>
+			</select>
+			<div id="mL_Content">
+				<input type="radio" name="mapPreset" id="mL_test" value="TestMap"> Test Map<br>
+				<input type="radio" name="mapPreset" id="mL_IRL" value="IRLMap"> IRL Map<br>
+			</div>
+			<br>
+			<input type="button" value="Load Map" onclick="mL_loadSelected()">
+		</div>
+		<div id="countryCreateBox">
+			<select id="country_create_menu" onchange="country_create_contentify()">
+				<option value="Preset">Presets</option>
+				<option value="MakeOwn">Create</option>
+			</select>
+			<div id="country_create_content">
+				Country:
+				<select id="country_create_presets_countries" onchange="country_create_presets_contentify()">
+					<option value="USA">United States</option><!--Washington,FDR,Lincoln-->
+					<option value="UKN">United Kingdom</option><!---->
+					<option value="FRA">France</option><!---->
+					<option value="GER">Germany</option><!---->
+					<option value="ITA">Italy</option><!---->
+					<option value="RUS">Russia</option><!---->
+					<option value="CHI">China</option><!---->
+					<option value="JAP">Japan</option><!---->
+				</select>
+				<br>
+				Leader:
+				<select id="country_create_presets_countries_leaders">
+					<option value="Washington">George Washington</option>
+					<option value="Lincoln">Abraham Lincoln</option>
+					<option value="FDR">Franklin D. Roosevelt</option>
+				</select>
+			</div>
+			<input type="button" value="Set Country" onclick="country_create_accept()">
 		</div>
 		<!--div id="x_map">
 			<img src="https://www.mapsofworld.com/images-mow/world-map.jpg"></img>
